@@ -260,20 +260,17 @@ class SettingSync:
         self._check_all_received()
 
     async def _on_sync_need_upload(self, msg: WSMessage) -> None:
+        # The server delivers one SettingSyncNeedUpload message per file, each
+        # carrying a single "path" (dto.SettingSyncNeedUploadMessage{Path}).
         data = _extract_inner(msg.data)
-        need_upload = data.get("needUpload", [])
-        if not isinstance(need_upload, list) or not need_upload:
+        rel_path = data.get("path", "")
+        if not rel_path:
             return
-        log.info("← SettingSyncNeedUpload: %d files", len(need_upload))
-        for item in need_upload:
-            rel_path = item.get("path", "") if isinstance(item, dict) else str(item)
-            if rel_path:
-                await self.push_modify(rel_path)
-        # The server reports these items via needUploadCount and delivers them
-        # through the paged download channel. Credit them to the received count
-        # so _check_all_received can complete when only uploads were requested;
-        # without this the initial pull ack is never triggered either.
-        self._received_modify += len(need_upload)
+        log.info("← SettingSyncNeedUpload: %s", rel_path)
+        await self.push_modify(rel_path, force=True)
+        # Each message is counted in the server's needUploadCount; credit it so
+        # _check_all_received can complete when only uploads were requested.
+        self._received_modify += 1
         self._check_all_received()
 
     async def _on_sync_end(self, msg: WSMessage) -> None:

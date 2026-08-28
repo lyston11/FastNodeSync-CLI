@@ -183,7 +183,10 @@ class WSClient:
             except Exception:
                 log.exception("Handler error for %s", msg.action)
         else:
-            if msg.action.endswith("PageAck"):
+            if msg.action.endswith("Ack"):
+                # Server acks for client pushes (NoteModifyAck,
+                # SettingModifyAck, FolderModifyAck, ...PageAck) are
+                # informational only; no client-side accounting needs them.
                 log.debug("Received server ack for %s", msg.action)
             else:
                 log.warning("Unhandled action from server: %s", msg.action)

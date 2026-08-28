@@ -283,6 +283,13 @@ class FileSync:
         rel_path = data.get("path", "")
         if rel_path:
             log.debug("← FileUploadAck: %s", rel_path)
+        # Each FileUpload detail requested by the server produces exactly one
+        # FileUploadAck once the server stores the uploaded file. Count it so
+        # _check_complete can fire when only uploads were requested; without
+        # this the sync stalls until the inactivity timeout.
+        self._mark_sync_activity()
+        self._received_modify += 1
+        self._check_complete()
 
     async def _on_sync_update(self, msg: WSMessage) -> None:
         data = _extract_inner(msg.data)
